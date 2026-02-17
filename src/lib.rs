@@ -82,7 +82,6 @@ pub fn run_with_progress(multi_progress: MultiProgress) -> anyhow::Result<()> {
     let cli = Cli::parse();
 
     let con = cli.pool()?;
-    eprintln!("{:#?}", cli);
     if cli.verbose {
         let colors = ColoredLevelConfig::new();
         Dispatch::new()
