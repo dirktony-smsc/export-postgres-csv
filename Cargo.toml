@@ -8,6 +8,7 @@ anyhow = "1.0.101"
 clap = { version = "4.5.59", features = ["derive"] }
 fern = "0.7.1"
 indicatif = "0.18.4"
+indicatif-log-bridge = "0.2.3"
 log = "0.4.29"
 r2d2 = "0.8.10"
 rayon = "1.11.0"
