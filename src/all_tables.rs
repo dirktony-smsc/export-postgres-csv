@@ -1,5 +1,4 @@
 use postgres::{Client, Statement, types::Type};
-use postgres_types::FromSql;
 
 pub struct AllTableNameStream {
     limit: u32,
