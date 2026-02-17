@@ -5,15 +5,18 @@ pub(crate) mod utils;
 use std::{
     fs::{File, create_dir_all},
     num::NonZeroU32,
+    time::SystemTime,
 };
 
 use clap::Parser;
 use csv::WriterBuilder;
+use fern::{Dispatch, colors::ColoredLevelConfig};
 use indicatif::{MultiProgress, ProgressBar};
 use postgres::{Config as PostgresCfg, NoTls};
 use r2d2_postgres::PostgresConnectionManager;
 
 #[derive(Debug, Parser)]
+#[command(version, about, long_about = None)]
 pub struct Cli {
     /// Postgres user
     #[arg(short)]
@@ -41,6 +44,9 @@ pub struct Cli {
     database: String,
     /// The directory to put the csv file to
     directory: String,
+    /// verbose...
+    #[arg(short)]
+    verbose: bool,
 }
 
 pub(crate) const LIMIT_FETCH: u32 = 100;
@@ -76,6 +82,30 @@ pub fn run_with_progress(multi_progress: MultiProgress) -> anyhow::Result<()> {
     let cli = Cli::parse();
 
     let con = cli.pool()?;
+    eprintln!("{:#?}", cli);
+    if cli.verbose {
+        let colors = ColoredLevelConfig::new();
+        Dispatch::new()
+            .format(move |out, msg, record| {
+                out.finish(format_args!(
+                    "[{} {} {}] {}",
+                    humantime::format_rfc3339_seconds(SystemTime::now()),
+                    colors.color(record.level()),
+                    record.target(),
+                    msg
+                ));
+            })
+            .level(log::LevelFilter::Debug)
+            .chain({
+                let multi = multi_progress.clone();
+                fern::Output::call(move |rec| {
+                    multi.suspend(|| {
+                        println!("{}", rec.args());
+                    })
+                })
+            })
+            .apply()?;
+    }
     let all_tabls = {
         let owner = cli.table_owner();
         let fetching =
@@ -130,7 +160,7 @@ pub fn run() {
     let multi_progress = MultiProgress::new();
     if let Err(err) = run_with_progress(multi_progress.clone()) {
         let _ = multi_progress.clear();
-        eprintln!("{err}");
+        eprintln!("{:?}", err);
         std::process::exit(1)
     }
 }

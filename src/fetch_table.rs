@@ -31,13 +31,21 @@ impl FetchTableData {
                 use std::fmt::Write;
                 let mut column_name_aggregated = String::new();
                 for name in &column_names {
-                    write!(&mut column_name_aggregated, "{name}, ")?;
+                    write!(
+                        &mut column_name_aggregated,
+                        "coalesce(\"{name}\"::text, '') as \"{name}\", "
+                    )?;
                 }
                 write!(&mut column_name_aggregated, "null as \"________nothing\"")?;
                 column_name_aggregated
             };
-            let query_inner = format!("SELECT {column_name_aggregated} from {table_name}");
-            connection.prepare_typed(&format!("SELECT *, COUNT(*) OVER () as \"__table_count_total\" FROM ({query_inner}) as paged_query_with LIMIT $1 OFFSET $2"), &[Type::INT8, Type::INT8])?
+            let query_inner = format!("SELECT {column_name_aggregated} from \"{table_name}\"");
+            log::debug!("query_inner: {query_inner}");
+            let query_to_prepare = format!(
+                "SELECT *, COUNT(*) OVER () as \"__table_count_total\" FROM ({query_inner}) as paged_query_with OFFSET $1 LIMIT $2"
+            );
+            log::debug!("to preprare: {query_to_prepare}");
+            connection.prepare_typed(&query_to_prepare, &[Type::INT8, Type::INT8])?
         };
         let offset = 0i64;
         let limit = crate::LIMIT_FETCH as i64;
@@ -51,7 +59,7 @@ impl FetchTableData {
             .map(|row| {
                 let mut record = StringRecord::new();
                 for name in &column_names {
-                    record.push_field(row.try_get(name.as_str())?);
+                    record.push_field(&row.try_get::<_, String>(name.as_str())?);
                 }
                 Ok::<_, postgres::Error>(record)
             })
