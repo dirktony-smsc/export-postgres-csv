@@ -147,11 +147,11 @@ pub fn run_with_progress(multi_progress: MultiProgress) -> anyhow::Result<()> {
             }
             file.flush()?;
         }
-        progress.finish_with_message(format!(
+        println!(
             "Exported all tables as csv to {}",
             dir.to_str()
                 .ok_or(anyhow::anyhow!("Cannot convert PathBuf to str"))?
-        ));
+        );
     }
     Ok(())
 }
