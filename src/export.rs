@@ -19,7 +19,7 @@ pub struct ExportArgs {
     pub table_owner: Option<String>,
     /// The directory to put the csv file to
     pub directory: String,
-    /// Run data in parallel
+    /// export data in parallel using rayon
     #[arg(short)]
     pub parallel: bool,
 }
