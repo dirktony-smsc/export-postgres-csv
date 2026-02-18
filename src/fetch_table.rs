@@ -1,6 +1,8 @@
 use csv::StringRecord;
-use postgres::{Client, Statement};
+use postgres::Statement;
 use postgres_types::Type;
+
+use crate::utils::tables::get_table_column_name;
 
 #[derive(derive_more::Debug)]
 pub struct FetchTableData {
@@ -111,18 +113,4 @@ impl FetchTableData {
         }
         header
     }
-}
-
-pub fn get_table_column_name(
-    connection: &mut Client,
-    table: &str,
-) -> Result<Vec<String>, postgres::Error> {
-    connection
-        .query(
-            "SELECT column_name from information_schema.columns where table_name = $1",
-            &[&table],
-        )?
-        .into_iter()
-        .map(|row| row.try_get("column_name"))
-        .collect()
 }
