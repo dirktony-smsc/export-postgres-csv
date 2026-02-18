@@ -1,7 +1,6 @@
 use csv::StringRecord;
-use postgres::{Client, NoTls, Statement};
+use postgres::{Client, Statement};
 use postgres_types::Type;
-use r2d2_postgres::PostgresConnectionManager;
 
 #[derive(derive_more::Debug)]
 pub struct FetchTableData {
@@ -12,7 +11,7 @@ pub struct FetchTableData {
     offset: i64,
     column_names: Vec<String>,
     #[debug(ignore)]
-    pool: r2d2::PooledConnection<PostgresConnectionManager<NoTls>>,
+    pool: crate::PooledConnection,
 }
 
 impl FetchTableData {

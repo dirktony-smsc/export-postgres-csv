@@ -3,7 +3,7 @@ use postgres::{Client, Statement, types::Type};
 pub struct AllTableNameStream {
     limit: u32,
     offset: u32,
-    pool: crate::PoolConnection,
+    pool: crate::PooledConnection,
     current: Vec<String>,
     total: u64,
     fetch_statement: Statement,
@@ -40,7 +40,7 @@ impl AllTableNameStream {
             offset,
             total,
             current: rows,
-            pool,
+            pool: connection,
         })
     }
     /// Return [`true`] if we pulled some data, [`false`] otherwise
@@ -50,8 +50,8 @@ impl AllTableNameStream {
             self.current.clear();
             return Ok(false);
         }
-        let mut connection = self.pool.get()?;
-        let rows = connection
+        let rows = self
+            .pool
             .query(&self.fetch_statement, &[&offset, &self.limit])?
             .into_iter()
             .map(|row| {

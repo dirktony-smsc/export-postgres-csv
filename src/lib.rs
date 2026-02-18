@@ -73,6 +73,7 @@ impl Cli {
 }
 
 pub(crate) type PoolConnection = r2d2::Pool<PostgresConnectionManager<NoTls>>;
+pub(crate) type PooledConnection = r2d2::PooledConnection<PostgresConnectionManager<NoTls>>;
 
 pub fn run_with_progress(multi_progress: MultiProgress) -> anyhow::Result<()> {
     let cli = Cli::parse();
