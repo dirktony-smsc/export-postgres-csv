@@ -113,7 +113,7 @@ impl FetchTableData {
     }
 }
 
-fn get_table_column_name(
+pub fn get_table_column_name(
     connection: &mut Client,
     table: &str,
 ) -> Result<Vec<String>, postgres::Error> {
