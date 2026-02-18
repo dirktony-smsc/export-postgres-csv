@@ -107,6 +107,7 @@ pub fn run_with_progress(multi_progress: MultiProgress) -> anyhow::Result<()> {
             progress: multi_progress,
             table_owner: export_args.table_owner.clone().unwrap_or(cli.user.clone()),
             directory: export_args.directory.clone(),
+            parallel: export_args.parallel,
         }
         .run()?,
     }
