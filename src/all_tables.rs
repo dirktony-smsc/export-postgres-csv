@@ -10,6 +10,7 @@ pub struct AllTableNameStream {
 }
 
 impl AllTableNameStream {
+    #[allow(unused)]
     pub fn get_current_ref(&self) -> &[String] {
         &self.current
     }
@@ -41,13 +42,6 @@ impl AllTableNameStream {
             current: rows,
             pool,
         })
-    }
-    pub fn next(mut self) -> anyhow::Result<Option<Self>> {
-        if self.next_in_place()? {
-            Ok(Some(self))
-        } else {
-            Ok(None)
-        }
     }
     /// Return [`true`] if we pulled some data, [`false`] otherwise
     pub fn next_in_place(&mut self) -> anyhow::Result<bool> {

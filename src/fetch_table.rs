@@ -17,6 +17,7 @@ impl FetchTableData {
     pub fn column_names(&self) -> &[String] {
         &self.column_names
     }
+    #[allow(unused)]
     pub fn get_current_ref(&self) -> &[StringRecord] {
         &self.current
     }
@@ -101,13 +102,6 @@ impl FetchTableData {
         self.current = current;
         self.total = total;
         Ok(true)
-    }
-    pub fn next(mut self) -> anyhow::Result<Option<Self>> {
-        if self.next_in_place()? {
-            Ok(Some(self))
-        } else {
-            Ok(None)
-        }
     }
     pub fn get_csv_header(&self) -> StringRecord {
         let mut header = StringRecord::new();

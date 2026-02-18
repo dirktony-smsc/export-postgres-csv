@@ -1,19 +1,17 @@
 pub(crate) mod all_tables;
+pub(crate) mod export;
 pub(crate) mod fetch_table;
 pub(crate) mod utils;
 
-use std::{
-    fs::{File, create_dir_all},
-    num::NonZeroU32,
-    time::SystemTime,
-};
+use std::{num::NonZeroU32, time::SystemTime};
 
-use clap::Parser;
-use csv::WriterBuilder;
+use clap::{Parser, Subcommand};
 use fern::{Dispatch, colors::ColoredLevelConfig};
-use indicatif::{MultiProgress, ProgressBar};
+use indicatif::MultiProgress;
 use postgres::{Config as PostgresCfg, NoTls};
 use r2d2_postgres::PostgresConnectionManager;
+
+use crate::export::ExportTablesToDir;
 
 #[derive(Debug, Parser)]
 #[command(version, about, long_about = None)]
@@ -30,23 +28,23 @@ pub struct Cli {
     /// Postgres port
     #[arg(short)]
     port: Option<u16>,
+    /// Database name
+    #[arg(short)]
+    database: String,
     /// Sets the maximum number of connections managed by the pool.
     #[arg(long)]
     max_connection: Option<NonZeroU32>,
-
-    //workers: Option<u16>,
-    /// the table owner to get table on
-    ///
-    /// Default to [`Self::user`] if not set
-    #[arg(long)]
-    table_owner: Option<String>,
-    /// Database name
-    database: String,
-    /// The directory to put the csv file to
-    directory: String,
     /// verbose...
     #[arg(short)]
     verbose: bool,
+
+    #[command(subcommand)]
+    command: Commands,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum Commands {
+    Export(export::ExportArgs),
 }
 
 pub(crate) const LIMIT_FETCH: u32 = 100;
@@ -70,9 +68,6 @@ impl Cli {
             self.to_postgres_cfg(),
             NoTls,
         ))
-    }
-    fn table_owner(&self) -> &str {
-        self.table_owner.as_deref().unwrap_or(&self.user)
     }
 }
 
@@ -105,52 +100,14 @@ pub fn run_with_progress(multi_progress: MultiProgress) -> anyhow::Result<()> {
             })
             .apply()?;
     }
-    let all_tabls = {
-        let owner = cli.table_owner();
-        let fetching =
-            ProgressBar::new_spinner().with_message(format!("Fetching all tables of {owner}"));
-        let mut tab_names = Vec::<String>::new();
-        let mut all_tabls = all_tables::AllTableNameStream::new(con.clone(), owner)?;
-        loop {
-            tab_names.extend(all_tabls.take_current());
-            if !all_tabls.next_in_place()? {
-                break;
-            }
+    match &cli.command {
+        Commands::Export(export_args) => ExportTablesToDir {
+            pool: con,
+            progress: multi_progress,
+            table_owner: export_args.table_owner.clone().unwrap_or(cli.user.clone()),
+            directory: export_args.directory.clone(),
         }
-        fetching.finish_with_message(format!("Got {} tables", tab_names.len()));
-        tab_names
-    };
-    let dir = {
-        create_dir_all(&cli.directory)?;
-        std::path::Path::new(&cli.directory)
-            .to_path_buf()
-            .canonicalize()?
-    };
-    {
-        use indicatif::ProgressIterator;
-        let progress_iter = all_tabls.into_iter().progress();
-        let progress = progress_iter.progress.clone();
-        multi_progress.add(progress.clone());
-        for table in progress_iter {
-            let mut table_fetch = fetch_table::FetchTableData::new(con.clone(), &table)?;
-            let mut file =
-                WriterBuilder::new().from_writer(File::create(dir.join(format!("{table}.csv")))?);
-            file.write_byte_record(table_fetch.get_csv_header().as_byte_record())?;
-            loop {
-                for records in table_fetch.take_current() {
-                    file.write_byte_record(records.as_byte_record())?;
-                }
-                if !table_fetch.next_in_place()? {
-                    break;
-                }
-            }
-            file.flush()?;
-        }
-        println!(
-            "Exported all tables as csv to {}",
-            dir.to_str()
-                .ok_or(anyhow::anyhow!("Cannot convert PathBuf to str"))?
-        );
+        .run()?,
     }
     Ok(())
 }
