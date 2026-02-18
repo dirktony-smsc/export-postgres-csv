@@ -1,8 +1,9 @@
 use csv::StringRecord;
-use postgres::{Client, Statement};
+use postgres::{Client, NoTls, Statement};
 use postgres_types::Type;
+use r2d2_postgres::PostgresConnectionManager;
 
-#[derive(Debug)]
+#[derive(derive_more::Debug)]
 pub struct FetchTableData {
     current: Vec<StringRecord>,
     fetch_statement: Statement,
@@ -10,7 +11,8 @@ pub struct FetchTableData {
     total: i64,
     offset: i64,
     column_names: Vec<String>,
-    pool: crate::PoolConnection,
+    #[debug(ignore)]
+    pool: r2d2::PooledConnection<PostgresConnectionManager<NoTls>>,
 }
 
 impl FetchTableData {
@@ -72,7 +74,7 @@ impl FetchTableData {
             total,
             offset,
             column_names,
-            pool,
+            pool: connection,
         })
     }
     /// Return [`true`] if we pulled some data, [`false`] otherwise
@@ -82,7 +84,7 @@ impl FetchTableData {
             self.current.clear();
             return Ok(false);
         }
-        let mut connection = self.pool.get()?;
+        let connection = &mut self.pool;
         let rows = connection.query(&self.fetch_statement, &[&offset, &self.limit])?;
         let total = rows
             .first()

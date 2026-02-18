@@ -19,6 +19,7 @@ thiserror = "2.0"
 postgres-types = {version = "0.2", features = ["derive"]}
 time = "0.3"
 humantime = "2.3.0"
+derive_more = { version = "2", features = ["debug"]}
 
 [dev-dependencies]
 dotenvy = "0.15"
